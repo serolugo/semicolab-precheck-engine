@@ -21,7 +21,7 @@ from veriflow.core.validator import validate_tools
 from veriflow.models.tile_config_ci import TileConfigCI
 
 REGISTRY_ISSUE_FORM_URL = (
-    "https://github.com/mifral/semicolab-registry/issues/new"
+    "https://github.com/serolugo/semicolab-registry/issues/new"
     "?template=submit_tile.yml"
 )
 
