@@ -148,6 +148,8 @@ def cmd_precheck(
         commit_author=commit_author, rtl_files=rtl_files,
         has_testbench=has_testbench, today_str=today_str,
     )
+    if synth_result == "FAIL":
+        raise VeriFlowError("Precheck FAILED — synthesis did not pass")
 
 
 def _finalize(
