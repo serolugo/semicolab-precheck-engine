@@ -14,13 +14,11 @@ def parse_sim_log(log_text: str) -> dict:
     if m:
         raw_time = int(m.group(1))
         unit = m.group(2)
-        # Convert to ns
         unit_to_ns = {"1ps": 0.001, "ps": 0.001, "ns": 1, "us": 1000, "ms": 1000000}
         factor = unit_to_ns.get(unit, 1)
         val = raw_time * factor
         sim_time = f"{val:.3f}".rstrip("0").rstrip(".") + " ns"
 
-    # seed pattern
     m = re.search(r"seed[^\d]*(\d+)", log_text, re.IGNORECASE)
     if m:
         seed = m.group(1).strip()
@@ -33,33 +31,35 @@ def parse_synth_log(log_text: str) -> dict:
     Parse Yosys synthesis log.
     Returns dict with cells, warnings, errors, has_latches.
 
-    Yosys stat output format:
-       253 cells
+    Gate rules (ISSUE-001):
+    - FAIL: ERROR: in log (Yosys real errors, uppercase) or exit code != 0
+    - FAIL: latch inferred (exact Yosys message "Latch inferred for")
+    - WARNING: Warning: in log (informative only, does not block)
+    - PASS: no errors, no latches
     """
     cells = ""
     warnings = 0
     errors = 0
     has_latches = False
 
-    # Yosys: "      253 cells"  (indented number followed by "cells")
-    # Take the LAST occurrence (final stat block)
+    # Cell count — take last occurrence (final stat block)
+    # Yosys format: "      253 cells"
     matches = re.findall(r"^\s+(\d+) cells\s*$", log_text, re.MULTILINE)
     if matches:
         cells = matches[-1]
     else:
-        # Fallback: "Number of cells:    3"
         m = re.search(r"Number of cells:\s*(\d+)", log_text)
         if m:
             cells = m.group(1)
 
-    # Warnings
-    warnings = len(re.findall(r"^\s*Warning:", log_text, re.MULTILINE | re.IGNORECASE))
+    # Warnings — Yosys format: "Warning: ..." (informative only)
+    warnings = len(re.findall(r"^Warning:", log_text, re.MULTILINE))
 
-    # Errors
-    errors = len(re.findall(r"^\s*Error:", log_text, re.MULTILINE | re.IGNORECASE))
+    # Errors — Yosys format: "ERROR: ..." (real failures, uppercase)
+    errors = len(re.findall(r"^ERROR:", log_text, re.MULTILINE))
 
-    # Inferred latches
-    if re.search(r"Latch inferred", log_text, re.IGNORECASE):
+    # Latches — exact Yosys message (fix ISSUE-001: was too broad with IGNORECASE)
+    if re.search(r"Latch inferred for", log_text):
         has_latches = True
 
     return {
